@@ -164,11 +164,12 @@
       makes stairs and ramps feel smooth instead of bumping you to a stop.
     </p>
     <p>
-      The step-up attempt isn't gated by any specific angle. It fires whenever your regular slide
-      move hit something at all, or whenever you were on the ground and that slide got cut short by
-      more than 10%. Steep enough terrain trips one of those two pretty much by definition, so in
-      practice "walkable slope" and "triggers a step-up attempt" end up being close to the same
-      thing, but there's no angle value hardcoded anywhere in this function.
+      There's no specific slope angle that triggers a step-up attempt. It happens under two
+      conditions instead: either your movement bumped into something and got redirected at all, or
+      you were already on the ground and whatever you hit blocked more than 10% of where you were
+      trying to go. Most slopes and stairs steep enough to actually feel like an obstacle will trip
+      one of those two, which is why it feels tied to slope angle in practice, even though no angle
+      value is ever checked in the code.
     </p>
 
     <h2>The scale factor that never gets clamped</h2>
@@ -233,12 +234,13 @@ frame B:  -1461  ->  +1610   (still counted as grounded, scalePred goes negative
       earlier in the same frame, and how far you move in one of those steps is your velocity
       multiplied by the frame's time step. A lower framerate means a bigger time step, which means a
       bigger chunk of movement gets resolved in a single frame, which means a bigger position
-      correction for the exact same fall speed. That's the entire reason dropping to a low FPS makes
-      the bug so much easier to trigger: it's not changing anything about the collision logic, it's
-      just making each individual frame's correction bigger, so the same fall speed crosses the
-      22.5-unit threshold that it wouldn't cross at a smooth 125 FPS. Fall fast enough and you'll
-      cross the threshold at any framerate, but low FPS is what makes it reliable at fall speeds you
-      can reach without much effort.
+      correction for the exact same fall speed. That's the entire reason dropping to a low FPS
+      changes things so much: it's not changing anything about the collision logic, it's just making
+      each individual frame's correction bigger, so the same fall speed crosses the 22.5-unit
+      threshold that it wouldn't cross at a smooth 125 FPS. Fall fast enough and you'll cross the
+      threshold at any framerate, but low FPS is what makes it achievable at fall speeds you can
+      realistically reach. Landing the setup itself, on the exact edge, at the right moment, is still
+      the hard part.
     </p>
 
     <h2>Why prone almost never works</h2>
