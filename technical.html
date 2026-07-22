@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CoD4 Overbounces — Technical Breakdown</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body {
+    background: #c0c0c0;
+    font-family: Verdana, Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    color: #222;
+  }
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    background: #e8e4d8;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    box-shadow: 8px 8px 18px rgba(0,0,0,0.4);
+  }
+  .titlebar {
+    background: linear-gradient(180deg, #5a8fd6, #1b4faa);
+    color: #fff;
+    padding: 6px 6px 6px 16px;
+    font-weight: bold;
+    font-size: 16px;
+    border-bottom: 2px solid #0a2a5e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .win-buttons {
+    display: flex;
+    gap: 3px;
+  }
+  .win-buttons span {
+    width: 20px;
+    height: 18px;
+    background: linear-gradient(180deg, #eee, #aaa);
+    border: 1px solid;
+    border-color: #fff #404040 #404040 #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-family: Tahoma, Verdana, sans-serif;
+    font-weight: bold;
+    color: #222;
+    line-height: 1;
+  }
+  .win-buttons span.close {
+    background: linear-gradient(180deg, #f08a7e, #c0392b);
+    color: #fff;
+  }
+  ::-webkit-scrollbar {
+    width: 17px;
+    height: 17px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #dcdcdc;
+    border-left: 1px solid #808080;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+  }
+  ::-webkit-scrollbar-button {
+    background: linear-gradient(180deg, #eee, #aaa);
+    border: 1px solid;
+    border-color: #fff #404040 #404040 #fff;
+    height: 16px;
+  }
+  .content {
+    padding: 20px 24px;
+  }
+  h1 {
+    font-family: 'Times New Roman', serif;
+    font-size: 26px;
+    color: #26215c;
+    margin: 0 0 6px;
+  }
+  h2 {
+    font-family: 'Times New Roman', serif;
+    font-size: 19px;
+    color: #26215c;
+    border-bottom: 1px solid #999;
+    padding-bottom: 3px;
+    margin-top: 28px;
+  }
+  p, li {
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  hr {
+    border: none;
+    border-top: 2px solid #808080;
+    border-bottom: 1px solid #fff;
+    margin: 16px 0;
+  }
+  .box {
+    background: #fff;
+    border: 2px solid;
+    border-color: #808080 #fff #fff #808080;
+    padding: 12px 14px;
+    margin: 14px 0;
+  }
+  a { color: #0000EE; }
+  a:visited { color: #551A8B; }
+  code {
+    background: #f0ede0;
+    border: 1px solid #ccc;
+    padding: 1px 4px;
+    font-size: 13px;
+  }
+  pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 12px 14px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    border: 2px solid;
+    border-color: #808080 #fff #fff #808080;
+  }
+  .footer {
+    font-size: 11px;
+    color: #666;
+    text-align: center;
+  }
+  .backlink {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="titlebar">
+    <span>CoD4 Overbounces &mdash; Technical Breakdown</span>
+    <span class="win-buttons">
+      <span>_</span><span>&#9633;</span><span class="close">&#10005;</span>
+    </span>
+  </div>
+  <div class="content">
+
+    <p class="backlink">&larr; <a href="index.html">Back to the main page</a></p>
+
+    <h1>How the overbounce actually works</h1>
+    <p>
+      This page goes into the actual code behind the overbounce. If you just want to know how to
+      pull one off, the <a href="index.html">main page</a> has that. This one is for people who want
+      to know exactly what the game is doing wrong and why.
+    </p>
+
+    <h2>Where it lives</h2>
+    <p>
+      The bug sits inside <code>PM_StepSlideMove</code>, part of the player movement code that
+      handles stairs and ramps. Its whole job is to let you walk up a step or a slope without the
+      game treating it like a wall. When you're on the ground and moving into something steep enough
+      to cut your movement short, the game tries a step-up: it traces upward, slides you along the
+      new surface, then traces back down to see where you'd actually land. That's the mechanism that
+      makes stairs and ramps feel smooth instead of bumping you to a stop.
+    </p>
+    <p>
+      The step-up attempt isn't gated by any specific angle. It fires whenever your regular slide
+      move hit something at all, or whenever you were on the ground and that slide got cut short by
+      more than 10%. Steep enough terrain trips one of those two pretty much by definition, so in
+      practice "walkable slope" and "triggers a step-up attempt" end up being close to the same
+      thing, but there's no angle value hardcoded anywhere in this function.
+    </p>
+
+    <h2>The scale factor that never gets clamped</h2>
+    <p>
+      Once the step-up/step-down resolves, the game measures how much your vertical position had to
+      be corrected to make it work, and folds that into a scale factor applied to your entire
+      velocity vector:
+    </p>
+    <pre>absDelta  = fabs(origin.z_after - origin.z_before)   // how far the step-up/down moved you
+scalePred = (1.0 - absDelta / stepHeight) * 0.8 + 0.2
+velocity.x *= scalePred
+velocity.y *= scalePred
+velocity.z *= scalePred</pre>
+    <p>
+      <code>stepHeight</code> is 18 units normally, or 10 while prone. The intent is obvious once you
+      read the formula: a small correction should barely touch your velocity (scalePred close to 1),
+      a correction close to a full step height should slow you down hard (scalePred close to 0.2).
+      It's a soft brake, and for the vast majority of normal steps and ramps, that's exactly what it
+      does.
+    </p>
+    <p>
+      The problem is that nothing stops <code>absDelta</code> from exceeding <code>stepHeight</code>
+      by a lot. Once <code>absDelta / stepHeight</code> passes 1.25, <code>scalePred</code> goes
+      negative. There's no <code>max(0, scalePred)</code> anywhere, so the formula just keeps going
+      into negative territory and gets applied as-is. Multiplying a negative velocity (you falling,
+      <code>velocity.z &lt; 0</code>) by a negative scale gives a positive result: instead of braking
+      your fall, the game launches you upward, roughly in proportion to how far past the threshold you
+      landed.
+    </p>
+    <p>
+      In concrete numbers, that means a vertical correction bigger than 22.5 units while standing or
+      crouched, or 12.5 units while prone, is enough to flip the sign. Land on the edge of a slope
+      after a real fall, one that would normally produce a correction that large, and you get a
+      rebound instead of a stop.
+    </p>
+
+    <h2>Two passes, not one (in the edge-landing case)</h2>
+    <p>
+      For the edge-landing technique described on the main page, the flip isn't a single event, it's
+      two consecutive frames both running the same correction. Here's an actual logged sequence at 15
+      FPS, vertical speed only:
+    </p>
+    <pre>frame A:  -2128  ->  -1461   (feet touch the edge, scalePred still positive, a normal brake)
+frame B:  -1461  ->  +1610   (still counted as grounded, scalePred goes negative, the flip)</pre>
+    <p>
+      The first frame is an ordinary step correction, the kind that happens constantly and is
+      completely harmless: your feet clip the edge, the correction is still within range, and you get
+      slowed down the way the formula intends. But that contact leaves you flagged as grounded for
+      one more frame. On the next frame the correction runs again, except now the geometry has
+      shifted enough that the correction is bigger, past the threshold, and this time the scale factor
+      is negative. That's the frame that actually launches you. So in this example, the number right
+      before the launch is not the raw fall speed, it's already the output of the first, harmless
+      correction. This two-step pattern is what we've observed with the edge-landing setup
+      specifically, nothing in the formula itself requires two frames. Land with a large enough
+      correction on the very first contact and the flip could in principle happen in one, we just
+      haven't logged a case of that.
+    </p>
+
+    <h2>Why framerate matters</h2>
+    <p>
+      The correction that feeds into <code>absDelta</code> comes out of the physics steps that happen
+      earlier in the same frame, and how far you move in one of those steps is your velocity
+      multiplied by the frame's time step. A lower framerate means a bigger time step, which means a
+      bigger chunk of movement gets resolved in a single frame, which means a bigger position
+      correction for the exact same fall speed. That's the entire reason dropping to a low FPS makes
+      the bug so much easier to trigger: it's not changing anything about the collision logic, it's
+      just making each individual frame's correction bigger, so the same fall speed crosses the
+      22.5-unit threshold that it wouldn't cross at a smooth 125 FPS. Fall fast enough and you'll
+      cross the threshold at any framerate, but low FPS is what makes it reliable at fall speeds you
+      can reach without much effort.
+    </p>
+
+    <h2>Why prone almost never works</h2>
+    <p>
+      Right before the scale factor gets applied, <code>PM_StepSlideMove</code> calls
+      <code>PM_VerifyPronePosition</code>, which checks whether your current posture is valid. For
+      standing and crouching, that function does nothing at all, it returns immediately without
+      checking anything. It only actually runs a check when a specific posture flag is set, and that
+      flag corresponds to prone specifically, not crouch. Standing and crouching share the exact same
+      code path here.
+    </p>
+    <p>
+      When it does run, in prone, it hands off to <code>BG_CheckProne</code>, which traces your torso
+      and pelvis against the world and checks the resulting angle against a valid range. If that check
+      fails, the entire frame gets rolled back: your origin and velocity both get reset to what they
+      were before the step-up was ever attempted, and the scale factor calculation never happens. No
+      bounce, no bug.
+    </p>
+    <p>
+      The correction big enough to trigger the bug in the first place tends to leave your character in
+      a position that doesn't read as valid prone geometry, so <code>BG_CheckProne</code> fails almost
+      every time right when it would matter most. That's a plausible explanation for why the bug is so
+      much harder to get prone rather than something structurally blocking it. Nothing in the code
+      specifically targets prone, it's just collateral damage from a geometry check that exists for an
+      unrelated reason.
+    </p>
+
+    <h2>Not a one-off mistake</h2>
+    <p>
+      Whatever else is going on in <code>PM_StepSlideMove</code>, this particular formula isn't an
+      isolated slip. Earlier in the same function, before the scale factor is ever computed, there's
+      a dot-product test that rejects steps that didn't actually gain any ground, a separate check
+      against your jump budget, and a prone-position check, all of which exist specifically to catch
+      bad step results. The scale factor itself just doesn't get the same treatment: nothing clamps
+      it once it's computed.
+    </p>
+    <p>
+      This isn't just a CoD4 problem either. The same unclamped scale factor exists in other Call of
+      Duty titles built on this engine, confirmed on Black Ops 1. It's a mistake that got carried
+      forward across several games rather than something introduced specifically in CoD4.
+    </p>
+
+    <hr>
+    <p class="footer">Last updated: July 2026 &nbsp;&middot;&nbsp; <a href="index.html">Back to the main page</a></p>
+  </div>
+</div>
+</body>
+</html>
