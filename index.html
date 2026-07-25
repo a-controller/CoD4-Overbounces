@@ -194,11 +194,11 @@
       The most reliable setup we've found is landing right on the edge of that slope, somewhere
       between about 0.125 and 5 units from the edge. Your feet clip the slope just long enough to
       trigger the correction, and then you immediately fall off the edge and keep falling. Here's
-      what that looks like in an actual logged test: falling at roughly -2128 units/second
-      vertically, the character's feet touch the edge for a single frame (the game registers you as
-      grounded on something for that one frame, braking you down to -1461), and the very next frame
-      it's airborne again with the vertical speed flipped from -1461 to +1610. (The full breakdown of
-      why the flip took two frames in this case is on the <a href="technical.html">technical page</a>.)
+      what that looks like in an actual logged test: falling at around -1574 units/second
+      vertically, the character stays grounded on that edge for two physics ticks, not just one.
+      The first tick is a normal brake, down to -1558. The second is the flip, from -1016 up to
+      +2012. (The full breakdown of why the correction runs more than once is on the
+      <a href="technical.html">technical page</a>.)
     </p>
     <p>
       Speed matters. Walking into a slope at normal speed does
