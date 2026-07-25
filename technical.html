@@ -206,26 +206,29 @@ velocity.z *= scalePred</pre>
       rebound instead of a stop.
     </p>
 
-    <h2>Two passes, not one (in the edge-landing case)</h2>
+    <h2>The correction runs more than once</h2>
     <p>
-      For the edge-landing technique described on the main page, the flip isn't a single event, it's
-      two consecutive frames both running the same correction. Here's an actual logged sequence at 15
-      FPS, vertical speed only:
+      The flip doesn't happen the moment your feet touch the slope. Your character can stay grounded
+      on that edge for more than one physics tick, and <code>PM_StepSlideMove</code> runs its
+      correction on each one while that lasts. Most of those ticks are harmless, a normal brake that
+      leaves you slower but still falling the same direction. Only one specific tick, wherever
+      <code>absDelta/stepHeight</code> finally crosses 1.25, actually flips the sign.
     </p>
-    <pre>frame A:  -2128  ->  -1461   (feet touch the edge, scalePred still positive, a normal brake)
-frame B:  -1461  ->  +1610   (still counted as grounded, scalePred goes negative, the flip)</pre>
     <p>
-      The first frame is an ordinary step correction, the kind that happens constantly and is
-      completely harmless: your feet clip the edge, the correction is still within range, and you get
-      slowed down the way the formula intends. But that contact leaves you flagged as grounded for
-      one more frame. On the next frame the correction runs again, except now the geometry has
-      shifted enough that the correction is bigger, past the threshold, and this time the scale factor
-      is negative. That's the frame that actually launches you. So in this example, the number right
-      before the launch is not the raw fall speed, it's already the output of the first, harmless
-      correction. This two-step pattern is what we've observed with the edge-landing setup
-      specifically, nothing in the formula itself requires two frames. Land with a large enough
-      correction on the very first contact and the flip could in principle happen in one, we just
-      haven't logged a case of that.
+      Here's an actual sequence from a real overbounce:
+    </p>
+    <pre>tick 1:  origin.z 377.25   scalePred =  0.9896   vel.z: -1574.49 -> -1558.15   (normal brake)
+tick 2:  origin.z 309.96   scalePred = -1.9802   vel.z: -1015.97 -> +2011.82   (the flip)</pre>
+    <p>
+      The position confirms it's the same fall continuing, the character dropped 67 units between the
+      two. The extra drop in speed, from -1558 down to -1016, isn't this same formula running again,
+      something else in the collision response slows things down further along the way before the
+      tick that finally flips the sign. All of it happens too fast to see as separate frames just by
+      watching.
+    </p>
+    <p>
+      How many ticks it takes before the flip isn't fixed. It depends entirely on the geometry of the
+      specific slope you land on.
     </p>
 
     <h2>Why framerate matters</h2>
