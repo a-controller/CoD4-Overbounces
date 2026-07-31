@@ -171,6 +171,11 @@
       one of those two, which is why it feels tied to slope angle in practice, even though no angle
       value is ever checked in the code.
     </p>
+    <p>
+      That holds up in practice too. Overbounces have been reproduced on slopes as shallow as 2.6
+      degrees, barely a ramp at all, with the same result as much steeper ones. The geometry just
+      has to be enough to redirect your movement; how steep it looks isn't the limiting factor.
+    </p>
 
     <h2>The scale factor that never gets clamped</h2>
     <p>
@@ -244,6 +249,31 @@ tick 2:  origin.z 309.96   scalePred = -1.9802   vel.z: -1015.97 -> +2011.82   (
       threshold at any framerate, but low FPS is what makes it achievable at fall speeds you can
       realistically reach. Landing the setup itself, on the exact edge, at the right moment, is still
       the hard part.
+    </p>
+    <p>
+      The effect of framerate is a lot sharper than "lower is generally better." On one tested slope,
+      two attempts landed with essentially the same fall speed and the same computed rebound velocity,
+      one frame per second apart. At 15 FPS, nothing happened, no visible bounce at all. At 16 FPS, the
+      same attempt recovered the vast majority of the fall height. One frame per second was the entire
+      difference between a normal landing and a near-perfect rebound.
+    </p>
+
+    <h2>Why it doesn't always show up</h2>
+    <p>
+      Even when the scale factor does go negative, the flip doesn't always survive to become a visible
+      bounce. It comes down to the same ratio as before, absDelta over stepHeight: past 1.25 the sign
+      flips, but somewhere past roughly 3.8 on top of that, whatever runs right after the correction
+      tends to clip the rebound back down before it's ever visible. Below that it usually holds. That
+      second number isn't a fixed constant, it shifts a bit with the geometry of the spot, but it's
+      consistent enough that the framerate example above is really the same phenomenon from a different
+      angle: a higher FPS lowers the ratio for the same fall, and that alone can be the difference
+      between nothing happening and a full rebound.
+    </p>
+    <p>
+      There's a second, unrelated way an attempt goes nowhere: sometimes the step-up correction this
+      whole bug lives inside of doesn't run at all on a given landing. The scale factor never goes
+      negative because the code responsible for computing it is never reached in the first place, not
+      because the result got undone afterward.
     </p>
 
     <h2>Why prone almost never works</h2>

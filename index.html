@@ -212,11 +212,13 @@
     <p>
       Framerate is the other half of it. Dropping to a low FPS, 15 works well, makes the correction
       much stronger for the same speed. It doesn't have to be the exact instant you switch FPS, it
-      just needs to already be low by the time you actually land on that edge.
+      just needs to already be low by the time you actually land on that edge. The effect is more of
+      a cutoff than a gradual improvement, in one test a single frame per second, 15 versus 16, was
+      the entire difference between nothing happening and a near-perfect rebound.
     </p>
 
     <div class="video-frame">
-      <iframe src="https://www.youtube.com/embed/SJH0Z7NgtYk" title="Overbounce demonstration" allowfullscreen></iframe>
+      <iframe src="https://www.youtube.com/embed/o1kdgGepD5s" title="Overbounce demonstration" allowfullscreen></iframe>
     </div>
 
     <h2>FAQ</h2>
@@ -224,6 +226,12 @@
     <p><b>Is this the same as the classic Quake overbounce?</b> No. The Quake version comes from a
       velocity rescale after a clip that CoD4 simply doesn't have in its equivalent code. Different
       bug, different engine path, they just look similar from the outside.</p>
+    <p><b>I landed right on the edge with low FPS and nothing happened, why?</b> Usually the flip did
+      happen but didn't survive, the correction came out too large relative to the step. Raising your
+      FPS a bit shrinks that correction for the same fall and can turn a failed attempt into a working
+      one. The other possibility is that the correction never ran at all on that landing, in which case
+      it's about your positioning, not your FPS. See the <a href="technical.html">technical page</a> for
+      the exact numbers and why.</p>
 
     <h2>For the curious: how it actually works</h2>
     <p>
